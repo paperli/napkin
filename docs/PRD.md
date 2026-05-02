@@ -2,9 +2,9 @@
 
 **Product name:** Napkin  
 **Code name:** Project Napkin  
-**Version:** 0.2  
+**Version:** 0.3  
 **Primary surface:** Claude Code Skill  
-**Execution bridge:** Figma MCP  
+**Execution bridge:** Figma MCP (official — `mcp__claude_ai_Figma__*`)  
 **Primary output:** Shareable low-fidelity Figma user-flow wireframe board  
 **Secondary output:** Persisted `Napkin Flow IR` file (works without Figma MCP)
 
@@ -797,6 +797,55 @@ Low-fidelity only:
 - clear hierarchy
 - readable stakeholder-facing layout
 
+### Phase-2a Implementation (Official Figma MCP)
+
+Napkin's Phase-2a rendering targets the **official Figma MCP** (`mcp__claude_ai_Figma__*`). All writes route through `use_figma`, which executes arbitrary JS against the Figma Plugin API in a target file.
+
+**Tool mapping:**
+
+| Purpose | Tool |
+|---|---|
+| Get authenticated user / `planKey` | `mcp__claude_ai_Figma__whoami` |
+| Create a new design file | `mcp__claude_ai_Figma__create_new_file` |
+| Run Plugin-API JS in a file | `mcp__claude_ai_Figma__use_figma` |
+| Verify structure | `mcp__claude_ai_Figma__get_metadata` |
+| Verify visually | `mcp__claude_ai_Figma__get_screenshot` |
+
+**File-creation path (Phase 2a):**
+
+- **Default**: user provides an existing Figma file URL on first render. Napkin extracts the `fileKey` and persists it to `figmaBoard.fileKey`.
+- **Opt-in**: user explicitly requests a new file. Napkin calls `whoami` then `create_new_file` with `editorType: "design"`.
+
+**Rendering primitives only** in Phase 2a:
+
+- Frames (containers), text, rectangles, lines, polygons (arrowheads).
+- No component-library inserts, no auto-layout, no native connectors (FigJam-only).
+
+**Naming conventions** are required on every Napkin-created node:
+
+```
+[napkin:screen:<id>] <Name>           # screen frame
+[napkin:el:<id>] <type>: <label>      # element node
+[napkin:edge:<id>] <from> → <to>      # arrow shaft
+[napkin:edge:<id>:head]               # arrow head
+[napkin:overview:<kind>]              # overview text frames
+```
+
+This naming is the bridge between the IR and Figma — Phase-2b targeted iteration relies on finding nodes by tag.
+
+**Render modes (Phase 2a):**
+
+| Mode | Trigger | Behavior |
+|---|---|---|
+| First render | `figmaBoard.fileKey` is absent | Resolve fileKey, draw everything, persist metadata |
+| Whole-board re-render | User explicitly asks | **Destructive**: delete Napkin-owned pages, redraw. Loses user edits inside Napkin-owned frames. Warn + confirm |
+| Targeted iteration | "change screen 3 to a modal" | **Not in 2a.** Update IR; tell user the Figma board needs manual edit or whole-board re-render until 2b |
+| Catch-up | "render the latest IR" | Skip interpretation, run rendering pipeline |
+
+**Char-budget caveat:** `use_figma` accepts up to 50,000 chars of JS per call. Napkin batches by **page** (one `use_figma` call per page), splitting further by screen group only if a single page would exceed ~30,000 chars.
+
+Detailed rendering rules and JS recipes are in the Skill at `napkin/references/figma-board-guidelines.md` and `napkin/references/figma-rendering-recipes.md`.
+
 ---
 
 ## 18. Claude Code Skill Structure
@@ -807,15 +856,18 @@ Recommended folder. Phase-1 ships only the files listed under "Phase 1". Per-pla
 napkin/
   SKILL.md
   references/
-    # Phase 1 (ship now)
+    # Phase 1 (shipped)
     clarification-questions.md
     ux-interpretation-principles.md
     component-taxonomy.md
     napkin-flow-ir-schema.md
 
-    # Phase 2 (add when Figma MCP rendering ships)
-    figma-board-guidelines.md
-    examples.md
+    # Phase 2a (shipped — Figma MCP rendering)
+    figma-board-guidelines.md       # board structure, naming, visual rules
+    figma-rendering-recipes.md      # Plugin-API JS recipes for primitives + arrows
+
+    # Phase 2b+ (planned)
+    examples.md                     # worked IR → Figma examples
 
     # Phase 3+ (deferred — keep slot, do not write content yet)
     responsive-web-patterns.md   # Phase 3

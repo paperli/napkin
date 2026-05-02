@@ -127,36 +127,114 @@ Use the `Write` tool. Create `.napkin/` if it does not exist. Do not put the IR 
 
 ---
 
-## Step 5 — Render to Figma
+## Step 5 — Render to Figma (Phase 2a)
 
-Detect whether **Figma MCP** is connected by checking the available tool list for Figma MCP tools (e.g. tools whose names start with `mcp__figma` or similar Figma-MCP-provided names).
+Read `references/figma-board-guidelines.md` for board structure, naming, and visual rules.
+Read `references/figma-rendering-recipes.md` for Plugin-API JS patterns.
 
-### If Figma MCP is available
+### 5a. Detect Figma MCP
 
-In Phase-1, this skill ships without Figma rendering. Tell the user the IR is ready and that Figma rendering will be available in Phase-2 (`references/figma-board-guidelines.md` ships then). Do not attempt to render in Phase-1.
+Check the available tool list for `mcp__claude_ai_Figma__use_figma`. If absent, **enter IR-only mode**: tell the user the IR is saved at `.napkin/flow.json` and `.napkin/flow.md`, that Figma rendering was skipped because Figma MCP is not connected, and that they can fix MCP and ask Napkin to **catch up** later.
 
-### If Figma MCP is not available
+### 5b. Resolve fileKey
 
-Tell the user clearly:
+**On the first render** (no `figmaBoard.fileKey` in the IR yet):
 
-- the IR has been saved to `.napkin/flow.json` and `.napkin/flow.md`
-- Figma rendering was skipped because Figma MCP is not connected
-- they can fix MCP setup and ask Napkin to **catch up** later
+- **Default**: ask the user for a Figma file URL. Extract the fileKey from `https://www.figma.com/file/<fileKey>/...` or `https://www.figma.com/design/<fileKey>/...`.
+- **If the user explicitly says "create a new file"**: call `mcp__claude_ai_Figma__whoami` to get `planKey`, then call `mcp__claude_ai_Figma__create_new_file` with `editorType: "design"` and `fileName` set from the IR's `projectName`. Capture the returned `fileKey`.
 
-### Catch-up rendering (later phases)
+Persist `fileKey` to `.napkin/flow.json:figmaBoard.fileKey`.
 
-If the user runs Napkin again and says something like:
+**On subsequent renders**: read `figmaBoard.fileKey` from `.napkin/flow.json`. Do not ask again.
+
+### 5c. Plan the render
+
+Per `figma-board-guidelines.md`, plan up to four pages:
+
+- `00 Overview` — always
+- `01 Main Flow` — always
+- `02 Optional Branches` — only if any `flows[].isOptional === true`
+- `03 Notes` — only if `assumptions.length > 0` or `openQuestions.length > 0`
+
+Decide batching:
+
+- **One `use_figma` call per page** is the default.
+- If a single page's generated JS would exceed ~30,000 chars, split by **screen group** (5 screens per call).
+
+### 5d. Generate Plugin-API JS
+
+For each batch, generate JS that:
+
+1. Loads required fonts via `figma.loadFontAsync`.
+2. Defines the helpers and constants from `figma-rendering-recipes.md`.
+3. Creates or finds the target page (via `ensurePage`).
+4. Creates frames, elements, and arrows per the recipes, applying the `[napkin:...]` naming conventions to every node.
+5. Returns `{ pageId, frameIds, lastRenderedAt }`.
+
+### 5e. Execute the writes
+
+Call `mcp__claude_ai_Figma__use_figma` with:
+
+- `fileKey`: from `figmaBoard.fileKey`.
+- `code`: the generated JS.
+- `description`: a short summary of the batch (e.g., `"Render 01 Main Flow: 5 screens, 4 arrows"`). This appears in Figma's version history.
+
+Capture the return value from each call.
+
+### 5f. Persist Figma metadata
+
+After all batches succeed, write back to `.napkin/flow.json:figmaBoard`:
+
+- `fileKey` — already set
+- `pageId` — Main Flow page id
+- `frameIds` — merged map `{ screenId: figmaFrameId }` from all batches
+- `lastRenderedAt` — ISO timestamp
+
+This metadata is what makes Phase-2b targeted iteration and cross-session catch-up work.
+
+### 5g. Verify
+
+Recommended after each render:
+
+1. Call `mcp__claude_ai_Figma__get_metadata` on the file root to confirm expected pages exist.
+2. Call `mcp__claude_ai_Figma__get_screenshot` on the Main Flow page to give the user a preview.
+
+If verification surfaces missing pages or frames, tell the user what landed and what didn't. Phase 2a does not roll back partial renders.
+
+### 5h. Report
 
 ```
-Catch up — render the latest IR to Figma now.
+Rendered to: https://www.figma.com/file/<fileKey>
+
+Pages:
+- 00 Overview
+- 01 Main Flow (<n> screens, <m> arrows)
+- 02 Optional Branches (<n> branches)             (if rendered)
+- 03 Notes (<n> assumptions, <m> open questions)  (if rendered)
+
+Preview: <screenshot URL>
 ```
 
-…then:
+### Re-render and iteration (Phase 2a)
 
-1. **Skip interpretation entirely.** The IR is already approved.
-2. Load `.napkin/flow.json`.
-3. Render the full board to Figma in one pass.
-4. Store any board metadata Figma MCP returns (board id, frame ids) back into `.napkin/flow.json` so future iterative diffs can target the correct frames.
+Phase 2a supports two render modes only:
+
+- **First render** — `figmaBoard.fileKey` absent in the IR. Run the full pipeline above.
+- **Whole-board re-render** — user explicitly asks ("rebuild the Figma board"). **Destructive**: deletes Napkin-owned pages and recreates them, losing user edits inside Napkin-owned frames. Always warn and require confirmation before running.
+
+**Targeted iteration** ("change just screen 3 to a modal") is **Phase 2b**. In Phase 2a, if the user requests a targeted change:
+
+1. Update the IR to reflect the change and persist.
+2. Tell the user the IR is updated, and the Figma board does not yet support targeted patching — they can either edit the affected frame manually in Figma, or request a whole-board re-render, or wait for Phase 2b.
+
+### Catch-up rendering
+
+If the user fixes their MCP setup or starts a new session and says something like "catch up — render the latest IR":
+
+1. Load `.napkin/flow.json`.
+2. **Skip interpretation entirely.** The IR is already approved.
+3. Run Step 5 from 5a.
+4. If `figmaBoard.fileKey` is populated, target that file. If not, prompt for a URL (or accept "create a new file").
 
 ---
 

@@ -32,19 +32,20 @@ Napkin's brain is the Skill (interpretation, normalization, design-system reason
 
 ## Status
 
-**Phase 1 — IR generation only (current).**
+**Phase 2a — IR + Figma rendering (current).**
 
-Phase 1 ships the interpretation pipeline: sketch → IR → persisted to disk. Figma rendering is not yet wired up; that's Phase 2. Catch-up rendering is supported as a concept so a Phase-1 IR can be rendered later by a Phase-2+ Skill without redoing any work.
+Napkin now interprets sketches, persists a structured IR to `.napkin/`, and renders a low-fi wireframe board to a Figma file via the official Figma MCP. Targeted iteration ("change just screen 3 to a modal") is Phase 2b — for now, revisions are made by re-rendering the whole board or hand-editing in Figma.
 
 Roadmap:
 
 | Phase | Scope |
 |---|---|
-| 1 | Sketch → Napkin Flow IR (responsive web, persisted to `.napkin/`) ✅ |
-| 2 | IR → Figma board via Figma MCP |
-| 3 | Responsive-web design-system intelligence (consistent layouts, mobile/desktop variants) |
-| 4 | Mobile app patterns (sheets, tab bars, safe areas) |
-| 5 | Desktop and TV (focus graphs, voice-primary screens, lean-back UX) |
+| 1   | Sketch → Napkin Flow IR (responsive web, persisted to `.napkin/`) ✅ |
+| 2a  | IR → Figma board via official Figma MCP (first render + whole-board re-render) ✅ |
+| 2b  | Targeted iteration (patch single screen / element / edge in place) |
+| 3   | Responsive-web design-system intelligence (consistent layouts, mobile/desktop variants) |
+| 4   | Mobile app patterns (sheets, tab bars, safe areas) |
+| 5   | Desktop and TV (focus graphs, voice-primary screens, lean-back UX) |
 
 See [`docs/PRD.md`](docs/PRD.md) for the full product spec, schema, and roadmap.
 
@@ -73,7 +74,7 @@ Restart Claude Code (or start a new session) so the Skill is discovered.
 ### Requirements
 
 - [Claude Code](https://claude.com/claude-code) installed.
-- For Phase 2+ Figma rendering: Figma MCP server connected. Phase 1 works without it.
+- For Figma rendering (Phase 2a+): the **official Figma MCP** connected and authenticated. Without it, Napkin runs in IR-only mode and writes `.napkin/flow.json` + `.napkin/flow.md` for you to render later.
 
 ---
 
@@ -94,9 +95,9 @@ Napkin will:
 1. Read the sketch(es).
 2. Ask clarifying questions only if something is genuinely ambiguous (it tries not to over-ask).
 3. Produce a Napkin Flow IR and save it to `./.napkin/flow.json` and `./.napkin/flow.md` in the current project.
-4. In later phases: render the IR to a Figma board via Figma MCP.
+4. If the official Figma MCP is connected, render the IR to a Figma board. On the first render Napkin will ask for a Figma file URL — paste an empty design file you've created, and Napkin will draw the board into it. From then on, the file is remembered.
 
-The `.napkin/` folder is the source of truth for revisions. Asking Napkin to "make screen 3 a modal" later will diff against the persisted IR rather than regenerating from scratch.
+The `.napkin/` folder is the source of truth for revisions. The IR also stores the Figma file id and per-screen frame ids, so future sessions resume against the same Figma file without re-asking.
 
 ---
 
@@ -127,7 +128,9 @@ napkin/
     │   ├── ux-interpretation-principles.md
     │   ├── component-taxonomy.md
     │   ├── clarification-questions.md
-    │   └── napkin-flow-ir-schema.md
+    │   ├── napkin-flow-ir-schema.md
+    │   ├── figma-board-guidelines.md       (Phase 2a)
+    │   └── figma-rendering-recipes.md      (Phase 2a)
     └── tests/
         └── fixtures/
             └── README.md     fixture format + recommended set
