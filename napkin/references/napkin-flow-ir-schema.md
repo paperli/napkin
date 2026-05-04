@@ -46,6 +46,11 @@ type NapkinScreen = {
   frameRatio?: string;              // detected ratio class, e.g. "9:18", "16:9", "4:3";
                                     // drives renderer frame size + orientation.
                                     // viewport remains the semantic label.
+  sketchPosition?: {                // normalized centroid of the drawn frame
+    x: number;                      // 0..1, 0 = left edge of source image
+    y: number;                      // 0..1, 0 = top edge of source image
+    sourceSketch?: string;          // source image filename when multi-image
+  };
   layoutType: string;               // freeform short label e.g. "centered_form"
   primaryAction?: string;           // verb describing the screen's main job
   elements: NapkinElement[];

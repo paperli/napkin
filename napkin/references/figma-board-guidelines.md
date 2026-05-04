@@ -103,14 +103,16 @@ Standard sizes are not pixel-perfect; the goal is matching orientation and rough
 
 ## Canvas layout
 
-On the `01 Main Flow` page, screens are laid out in flow order:
+On the `01 Main Flow` page, screens are laid out **preserving the relative positions the user drew**. Each screen carries a normalized `sketchPosition` (0..1 inside its source image); the renderer scales those positions onto a per-source canvas region so a screen drawn top-right in the sketch lands top-right on the Figma board, and screens drawn vertically stacked stay vertically stacked.
 
-- **Left to right** following the primary flow path.
-- **Wrap to a new row** every 4 screens.
-- **Inter-frame spacing**: 200 px horizontal, 200 px vertical.
-- **Branch screens** on `02 Optional Branches` use the same wrap rules; their arrows can land on the `01 Main Flow` parent because Figma references work across pages — but Phase-2a draws each page's arrows on the page where both endpoints exist. Cross-page arrows are Phase-2b.
+- **Group by source sketch.** Screens from the same source image share one canvas region.
+- **Stack groups vertically.** Each source becomes its own region, stacked top-to-bottom with a 400 px gap between regions.
+- **Inter-frame spacing minimum**: 200 px gutter; the per-source region is sized big enough to keep relative positions readable.
+- **Fallback.** If `sketchPosition` is absent on any screen (legacy IR or ambiguous detection), the renderer falls back to linear left-to-right with row wrap at 4 — the previous Phase-2a default.
+- **Branches** on `02 Optional Branches` follow the same rules within their page. Cross-page arrows are Phase-2b.
+- **Overlap.** If two screens are drawn at near-identical positions in the sketch, they overlap on the Figma board. Phase-2a accepts this — the user's choice reads as deliberate (e.g. modal over parent). Phase-2b can add nudging.
 
-Phase-2a layout algorithm: linear left-to-right with row wrap at 4. That's it. Smarter graph layout is Phase-2b+.
+Phase-2a layout algorithm in one line: scale `sketchPosition` onto a per-source region; stack regions vertically; fall back to grid when positions are missing. Smarter graph layout is Phase-2b+.
 
 ---
 

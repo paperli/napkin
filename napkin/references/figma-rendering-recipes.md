@@ -138,10 +138,47 @@ function makeScreenFrame(screen) {
 
 ## Recipe 3: Layout screens on canvas
 
-Linear left-to-right, wrap every 4 screens, 200 px gutter.
+Preserve the relative position of screens as drawn in the sketch. `sketchPosition.x`/`y` are 0..1 normalized centroids inside the source image; the renderer scales them onto a per-source canvas region so a screen drawn top-right in the sketch lands top-right on the Figma board. Sources are stacked vertically with a gap between regions. If `sketchPosition` is missing on any screen (legacy IR), fall back to the previous linear grid.
 
 ```js
-function layoutScreens(parentPage, screenFrames) {
+const GROUP_GAP = 400;
+
+function layoutScreens(parentPage, screens, screenFrames) {
+  // Fall back to grid if any screen lacks a position (legacy IR or ambiguous detection).
+  if (!screens.every(s => s.sketchPosition)) {
+    return layoutScreensGrid(parentPage, screenFrames);
+  }
+
+  // Group by source image; screens from the same sketch share one canvas region.
+  const groups = new Map();
+  screens.forEach((s, i) => {
+    const key = s.sketchPosition.sourceSketch || "default";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ screen: s, frame: screenFrames[i] });
+  });
+
+  let groupY = 0;
+  for (const [, members] of groups) {
+    // Region big enough that scaled positions read as the user drew them.
+    const maxW = Math.max(...members.map(m => m.frame.width));
+    const maxH = Math.max(...members.map(m => m.frame.height));
+    const canvasW = Math.max(2400, members.length * (maxW + GAP));
+    const canvasH = Math.max(1200, Math.ceil(members.length / 3) * (maxH + GAP));
+
+    for (const { screen, frame } of members) {
+      const cx = screen.sketchPosition.x * canvasW;
+      const cy = screen.sketchPosition.y * canvasH;
+      frame.x = cx - frame.width / 2;
+      frame.y = groupY + cy - frame.height / 2;
+      parentPage.appendChild(frame);
+    }
+
+    groupY += canvasH + GROUP_GAP;
+  }
+}
+
+// Fallback: linear left-to-right with row wrap. Used when sketchPosition is absent.
+function layoutScreensGrid(parentPage, screenFrames) {
   screenFrames.forEach((frame, i) => {
     const col = i % COLS_PER_ROW;
     const row = Math.floor(i / COLS_PER_ROW);
@@ -151,6 +188,8 @@ function layoutScreens(parentPage, screenFrames) {
   });
 }
 ```
+
+Two screens drawn at near-identical positions in the sketch will overlap on the Figma board. Phase-2a accepts this — the user's choice to draw them on top reads as deliberate (e.g. modal-over-parent). Phase-2b can add anti-overlap nudging if the overlap turns out to be unintentional.
 
 ---
 
@@ -438,7 +477,7 @@ const screenFrames = ir.screens.map(s => {
   frameMap[s.id] = f.id;
   return f;
 });
-layoutScreens(mainFlow, screenFrames);
+layoutScreens(mainFlow, ir.screens, screenFrames);
 
 // Arrows
 ir.flows.forEach(edge => {
