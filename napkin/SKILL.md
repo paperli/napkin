@@ -82,6 +82,8 @@ For each sketch:
 | ~21:9 (ultra-wide) | `desktop` | rails + focus → `tv` |
 | ~1:1 (square) | ambiguous — ask | — |
 
+**Persist the ratio on each screen.** Record the detected ratio class as `frameRatio` on the screen (e.g. `"9:18"`, `"16:9"`, `"4:3"`, `"21:9"`, `"1:1"`). The renderer uses `frameRatio` to pick a standard frame size whose orientation matches what the user drew — a landscape-drawn screen renders landscape, portrait renders portrait. `viewport` stays the semantic label; `frameRatio` carries the rendering hint. See `napkin-flow-ir-schema.md` and `figma-rendering-recipes.md`.
+
 **No detectable frame.** If a sketch shows UI marks but no clearly drawn rectangle (floating elements on infinite paper, unframed whiteboard scribbles), fall back to the image's outer aspect ratio with reduced confidence (≤0.6) and flag the sketch in the 1b confirmation. Do not silently default to desktop.
 
 **`targetSurface` is fixed in Phase-2a.** Always set `targetSurface: "responsive_web"` regardless of detected viewport mix. Per-screen `viewport` carries the device shape — a frame drawn at ~9:18 becomes a `mobile` viewport on a `responsive_web` surface, which is the right answer because it's what the user drew. RWD is vague; honoring the drawn frame's ratio is how Napkin respects the user's intent. If the user explicitly names `mobile_app`, `desktop_app`, or `tv` in their prompt, record that on the IR but tell them rendering for that surface is deferred to Phase-4/5; the IR still holds the right viewport data, ready for the later phase.

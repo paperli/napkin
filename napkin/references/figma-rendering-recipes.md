@@ -37,6 +37,21 @@ const FILL_WHITE   = { type: "SOLID", color: { r: 1,     g: 1,     b: 1     } };
 const TEXT_DARK    = { type: "SOLID", color: { r: 0.2,   g: 0.2,   b: 0.2   } };
 const TEXT_MUTED   = { type: "SOLID", color: { r: 0.467, g: 0.467, b: 0.467 } }; // #777777
 
+// Standard sizes keyed by detected frameRatio. Picks orientation + aspect
+// to match what the user drew. Preferred over SIZES when frameRatio is set.
+const SIZES_BY_RATIO = {
+  "9:19.5": [390, 844],   // modern phone, portrait
+  "9:16":   [375, 667],   // older phone, portrait
+  "3:4":    [768, 1024],  // tablet, portrait
+  "4:3":    [1024, 768],  // tablet, landscape
+  "16:10":  [1440, 900],  // desktop
+  "16:9":   [1440, 810],  // desktop / lean-back
+  "21:9":   [2560, 1080], // desktop, ultrawide
+  "18:9":   [812, 375],   // rotated phone, landscape
+  "1:1":    [600, 600],   // square; ambiguous, should be confirmed in 1b
+};
+
+// Fallback when frameRatio is absent (legacy IR or ambiguous detection).
 const SIZES = {
   desktop: [1440, 900],
   tablet:  [768, 1024],
@@ -107,7 +122,12 @@ const notes         = hasNotes ? ensurePage("03 Notes") : null;
 
 ```js
 function makeScreenFrame(screen) {
-  const [w, h] = SIZES[screen.viewport] || SIZES.desktop;
+  // Prefer detected frameRatio (matches the orientation the user drew);
+  // fall back to viewport defaults; finally fall back to desktop.
+  const [w, h] =
+    (screen.frameRatio && SIZES_BY_RATIO[screen.frameRatio]) ||
+    SIZES[screen.viewport] ||
+    SIZES.desktop;
   const frame = makeFrame(`[napkin:screen:${screen.id}] ${screen.name}`, w, h);
   frame.strokes = [STROKE_DARK];   // primary content frames use dark stroke
   return frame;

@@ -606,6 +606,9 @@ type NapkinScreen = {
   name: string;
   purpose: string;
   viewport: "desktop" | "tablet" | "mobile" | "tv";
+  frameRatio?: string;            // detected ratio class, e.g. "9:18", "16:9", "4:3"
+                                  // drives renderer frame size + orientation;
+                                  // viewport remains the semantic label
   layoutType: string;
   primaryAction?: string;
   elements: NapkinElement[];

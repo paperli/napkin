@@ -43,6 +43,9 @@ type NapkinScreen = {
   name: string;                     // short title, e.g. "Signup"
   purpose: string;                  // one-line job-to-be-done
   viewport: "desktop" | "tablet" | "mobile" | "tv";
+  frameRatio?: string;              // detected ratio class, e.g. "9:18", "16:9", "4:3";
+                                    // drives renderer frame size + orientation.
+                                    // viewport remains the semantic label.
   layoutType: string;               // freeform short label e.g. "centered_form"
   primaryAction?: string;           // verb describing the screen's main job
   elements: NapkinElement[];

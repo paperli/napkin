@@ -79,16 +79,25 @@ The `[napkin:...]` prefix is **required** on every node Napkin creates. It is wh
 
 ---
 
-## Frame sizes per viewport
+## Frame sizes by ratio class
 
-| Viewport | Frame size (W × H) | Notes |
+Frame dimensions are picked from a **standard-size lookup keyed by the detected `frameRatio`**, not by `viewport` alone. `viewport` is the semantic label (`mobile`, `tablet`, `desktop`, `tv`); `frameRatio` is the rendering hint that determines orientation and aspect.
+
+| Ratio class | Frame (W × H) | Typical use |
 |---|---|---|
-| `desktop` | 1440 × 900 | Default for responsive web |
-| `tablet`  | 768 × 1024 | |
-| `mobile`  | 375 × 812 | iPhone-ish proportions |
-| `tv`      | 1920 × 1080 | Phase 5; not used in Phase 2a |
+| `9:19.5` portrait | 390 × 844 | modern phone, portrait |
+| `9:16` portrait | 375 × 667 | older phone, portrait |
+| `3:4` portrait | 768 × 1024 | tablet, portrait |
+| `4:3` landscape | 1024 × 768 | tablet, landscape |
+| `16:10` landscape | 1440 × 900 | desktop |
+| `16:9` landscape | 1440 × 810 | desktop / lean-back |
+| `21:9` ultrawide | 2560 × 1080 | desktop, wide |
+| `18:9` landscape | 812 × 375 | rotated phone, landscape |
+| `1:1` square | 600 × 600 | ambiguous; ask in 1b before relying on this |
 
-Frame size is **fixed per viewport**. Napkin does not resize frames to fit content — content overflow is acceptable for a low-fi wireframe; clarity of the viewport box matters more.
+If `frameRatio` is absent (legacy IR or ambiguous detection), the renderer falls back to viewport defaults: `mobile` → 375 × 812, `tablet` → 768 × 1024, `desktop` → 1440 × 900, `tv` → 1920 × 1080.
+
+Standard sizes are not pixel-perfect; the goal is matching orientation and rough aspect, not 1:1 reproduction of what the user drew. Napkin does not resize frames to fit content — content overflow is acceptable for a low-fi wireframe; clarity of the frame box matters more.
 
 ---
 
