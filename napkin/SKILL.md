@@ -133,6 +133,8 @@ Read `references/ux-interpretation-principles.md` before reasoning about the ske
 
 Read `references/component-taxonomy.md` to map rough marks to semantic components (a top rectangle is usually a header, three repeated cards are usually a card list, etc.).
 
+**Capture element layout from the sketch.** While interpreting each screen, record `sketchPosition` (0..1 centroid within its parent) and `sketchSize` (0..1 fraction of the parent's width and height) for every element. The parent reference frame is the screen for top-level elements and the parent container for nested ones (a button inside a card is normalized to the card, not the screen). Loose precision is fine — round to two decimals; this is an art-directorial hint, not pixel data. Without these the renderer stacks elements top-left at archetype defaults and the output reads nothing like the sketch.
+
 The output of this step is a **draft** Napkin Flow IR — held in your reasoning, not yet written to disk.
 
 ---

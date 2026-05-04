@@ -78,6 +78,15 @@ type NapkinElement = {
   notes?: string;                   // free-text designer note
   confidence: number;               // 0..1
 
+  sketchPosition?: {                // normalized centroid within the parent
+    x: number;                      // 0..1, relative to parent (screen frame
+    y: number;                      // or container) — not the source image
+  };
+  sketchSize?: {                    // normalized size relative to parent
+    w: number;                      // 0..1 fraction of parent width
+    h: number;                      // 0..1 fraction of parent height
+  };
+
   // (forward-looking) voice control
   voiceIntent?: string;             // utterance that targets this element
 

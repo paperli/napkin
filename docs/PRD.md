@@ -643,6 +643,15 @@ type NapkinElement = {
   notes?: string;
   confidence: number;
 
+  sketchPosition?: {              // normalized centroid within the parent
+    x: number;                    // 0..1, relative to parent (screen frame
+    y: number;                    // or container), not the source image
+  };
+  sketchSize?: {                  // normalized size relative to parent
+    w: number;                    // 0..1 fraction of parent width
+    h: number;                    // 0..1 fraction of parent height
+  };
+
   // (forward-looking, optional) — voice control.
   // Utterance that targets this element when voice is an active input mode.
   voiceIntent?: string;

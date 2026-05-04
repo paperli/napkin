@@ -337,6 +337,79 @@ For the other navigation types in Phase 2a, use the container archetype and plac
 
 ---
 
+## Recipe 4.5: Layout elements within a frame
+
+Element archetypes (Recipe 4) only create nodes; they don't position them. `renderElement` dispatches to the right archetype, applies `sketchPosition` / `sketchSize` if present, and recurses into `children`.
+
+`sketchPosition.x`/`y` are 0..1 normalized centroids within the parent (the screen frame for top-level elements, or the parent container for nested ones — a button inside a card is normalized to the card). `sketchSize.w`/`h` are 0..1 fractions of the parent's dimensions and override the archetype default size when present.
+
+```js
+function createByArchetype(el, parentNode) {
+  switch (el.type) {
+    case "page": case "section": case "container":
+    case "header": case "footer": case "sidebar":
+    case "split_panel": case "card": case "modal": case "dialog":
+      return makeContainer(el, parentNode.width, Math.min(parentNode.height, 200));
+    case "heading": case "paragraph": case "link": case "badge":
+      return makeTextNode(el);
+    case "button": case "icon_button": case "menu_item":
+    case "destructive_action": case "secondary_action":
+      return makeButton(el);
+    case "text_field": case "textarea": case "search_field":
+    case "select": case "combo_box":
+      return makeInput(el);
+    case "checkbox": case "radio_group": case "switch":
+      return makeToggle(el);
+    case "avatar": case "image_placeholder":
+      return makeMedia(el);
+    case "alert": case "toast": case "empty_state":
+    case "loading_state": case "error_state": case "confirmation_state":
+      return makeFeedback(el);
+    case "nav_bar":
+      return makeNavBar(el, parentNode.width);
+    default:
+      // Unknown type — generic container with a label so it still shows up.
+      return makeContainer(el, 200, 80);
+  }
+}
+
+function renderElement(el, parentNode, fallbackIndex = 0) {
+  const node = createByArchetype(el, parentNode);
+
+  // Size: prefer sketchSize, else keep archetype default.
+  if (el.sketchSize && typeof node.resize === "function") {
+    node.resize(
+      Math.max(40, el.sketchSize.w * parentNode.width),
+      Math.max(20, el.sketchSize.h * parentNode.height)
+    );
+  }
+
+  // Position: prefer sketchPosition centroid; else stack vertically at left margin.
+  if (el.sketchPosition) {
+    const cx = el.sketchPosition.x * parentNode.width;
+    const cy = el.sketchPosition.y * parentNode.height;
+    node.x = Math.max(0, cx - node.width / 2);
+    node.y = Math.max(0, cy - node.height / 2);
+  } else {
+    node.x = 24;
+    node.y = 24 + fallbackIndex * 56;
+  }
+
+  parentNode.appendChild(node);
+
+  // Recurse into children using this node as the new reference frame.
+  if (el.children && el.children.length) {
+    el.children.forEach((child, i) => renderElement(child, node, i));
+  }
+
+  return node;
+}
+```
+
+Two elements drawn at near-identical positions overlap on the Figma board. Phase-2a accepts this — same stance as for screens; Phase-2b can add nudging.
+
+---
+
 ## Recipe 5: Flow arrow
 
 Straight line from source frame center to destination frame center, with a triangle arrowhead.
@@ -473,7 +546,7 @@ renderOverview(overview, ir);
 const frameMap = {};
 const screenFrames = ir.screens.map(s => {
   const f = makeScreenFrame(s);
-  // ...recursively render s.elements into f using archetype helpers...
+  s.elements.forEach((el, i) => renderElement(el, f, i));
   frameMap[s.id] = f.id;
   return f;
 });

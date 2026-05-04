@@ -116,6 +116,18 @@ Phase-2a layout algorithm in one line: scale `sketchPosition` onto a per-source 
 
 ---
 
+## Element layout within frames
+
+The same position-preserving rule applies one level down: each `NapkinElement` carries optional `sketchPosition` (0..1 centroid within its parent) and `sketchSize` (0..1 fraction of parent's width/height). The renderer scales these onto the actual screen frame so elements land roughly where they were drawn, at roughly the size they were drawn.
+
+- **Reference frame is the parent.** Top-level elements normalize to the screen frame; nested elements (a button inside a card) normalize to the immediate parent container, not the screen. This keeps the math compositional.
+- **Loose precision.** Two-decimal rounding is enough; this is an art-directorial hint, not pixel data.
+- **Size override.** If `sketchSize` is present, the renderer overrides the archetype default — so a button drawn full-width comes out wide instead of the archetype's 120 px default.
+- **Fallback.** If `sketchPosition` is missing, the renderer stacks elements vertically at the left margin (24 px x, 56 px row height). That's a degraded layout; Step 2 should capture positions so the fallback rarely fires.
+- **Overlap.** Same Phase-2a stance as screens — overlap is treated as deliberate (modal over content, dropdown over field).
+
+---
+
 ## Low-fi visual style
 
 Strict rules — no exceptions in Phase 2a:
