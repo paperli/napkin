@@ -33,6 +33,9 @@ The point is not to be exhaustive. The point is to surface the questions a thoug
 - Sketch has both desktop chrome (sidebar) and mobile chrome (bottom tab bar).
 - User says "responsive" but sketches only mobile.
 - Sketch implies TV (focus highlight, rails) but user said "web app."
+- Drawn frame ratio and content cues disagree (e.g. ~9:18 portrait frame containing a desktop-style sidebar and dense table).
+- Drawn frame ratio is ~1:1 (square) — too ambiguous to default.
+- User-named surface conflicts with what every sketch shows (e.g. "mobile_app" but all drawn frames are 16:9).
 
 ### Multiple plausible interpretations exist
 
@@ -69,6 +72,7 @@ The point is not to be exhaustive. The point is to surface the questions a thoug
 
 - Single screen labeled "Login" with email + password + button → assume it's a login form, document the assumption.
 - Three repeated cards with no labels → assume `list` of `card`, mark confidence ~0.7.
+- Drawn frame ratio is unambiguous (≥0.9 confidence on every sketch) **and** the user named a matching surface → infer per-screen `viewport`, record as `assumptions`, proceed without a confirmation turn.
 
 ### Things easier to show than ask
 
@@ -100,6 +104,9 @@ Group your questions by category and lead with the **most consequential** one. T
 - "Target surface — responsive web, mobile-native, desktop app, or TV? I'm seeing [signals]."
 - "Should I generate desktop-only frames, or desktop + mobile?"
 - "Phase-1 of Napkin focuses on responsive web. The sketch implies [other platform] — should I proceed as web for now, or wait?"
+- "From the drawn frame ratios I'm reading: [per-sketch breakdown]. Best guess: [surface]. Confirm or correct?"
+- "[Sketch] is ~[ratio] — I read that as [viewport]. Want me to treat it as [alt viewport] instead?"
+- "You said [surface] but every sketch is ~[ratio], which reads as [other surface]. Which is correct?"
 
 ### Optionality / branching
 

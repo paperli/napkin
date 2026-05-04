@@ -56,11 +56,60 @@ Both are first-class. If the user references a sketch but no image is attached a
 
 …and re-run with the path. Do not guess.
 
-Also collect or assume:
+Also collect:
 
-- **Target surface** (default: `responsive_web`). Other valid values: `mobile_app`, `desktop_app`, `tv`. Phase-1 implementation focus is responsive web; later phases add the rest.
 - **Product context** — a one-line description of what the flow is for.
-- **Target viewport(s)** when ambiguous (desktop, tablet, mobile).
+- **Target surface** — `responsive_web`, `mobile_app`, `desktop_app`, or `tv`. If the user didn't say, infer it (1a) and confirm (1b). Phase-1 implementation focus is responsive web; later phases add the rest.
+- **Per-screen viewport** — `desktop`, `tablet`, `mobile`, or `tv`. Inferred per sketch (1a).
+
+### 1a. Detect viewport from drawn sketch frames
+
+Infer viewport from the **aspect ratio of the drawn sketch frame** — not the image's aspect ratio. A phone photo of a desktop sketch is portrait at the photo level but the drawn frame is landscape. A whiteboard photo of three mobile screens is landscape at the photo level but each drawn frame is tall and portrait. The signal is the rectangle the user drew, not the photo crop.
+
+For each sketch:
+
+1. Find the rectangle(s) the user drew as screen frames. If a sketch contains multiple screen frames, treat each independently.
+2. Estimate the frame's width:height ratio.
+3. Combine with content cues (sidebars, bottom tab bars, mobile status-bar mockups, focus highlights, rails, browser chrome).
+4. Map to a viewport guess using the table below.
+
+| Drawn frame ratio | Default guess | Override cues |
+|---|---|---|
+| ~9:16 – 9:19.5 (tall portrait) | `mobile` | sidebar + dense table → `desktop` (narrow window) |
+| ~3:4 (portrait) | `tablet` | bottom tab bar → `mobile`; sidebar + dense table → `desktop` |
+| ~4:3 (landscape) | `tablet` | dense table + multi-pane → `desktop`; rails + focus highlight → `tv` |
+| ~16:9 / 16:10 (wide) | `desktop` | rails + focus highlight + lean-back framing → `tv` |
+| ~21:9 (ultra-wide) | `desktop` | rails + focus → `tv` |
+| ~1:1 (square) | ambiguous — ask | — |
+
+Then derive `targetSurface`:
+
+- All sketches resolve to `mobile` → propose `mobile_app`.
+- All sketches resolve to `desktop` → propose `desktop_app` if dense desktop chrome (menus, sidebars, multi-pane), else `responsive_web` (especially with browser chrome).
+- Mixed `mobile` + `desktop` → propose `responsive_web` with per-screen `viewport` set per sketch.
+- Any sketch resolves to `tv` → propose `tv`.
+
+### 1b. Confirm the guess
+
+Surface the guess as a single confirmation turn before generating the IR:
+
+```
+Detected sketch frames:
+- sketch_01.png — ~9:18  → mobile
+- sketch_02.png — ~16:9  → desktop
+- sketch_03.png — ~16:9  → desktop
+
+Best guess: responsive_web (1 mobile screen + 2 desktop screens).
+
+Confirm, or correct (e.g. "all mobile_app", or "sketch_02 is tablet").
+```
+
+Resolution:
+
+- If the user already named the surface in their prompt **and** it matches the dominant detected ratio, skip this confirmation and record per-screen viewports as `assumptions`.
+- If the user named a surface that **conflicts** with what every sketch shows (e.g. "mobile_app" but all sketches are 16:9), surface the conflict and ask — don't silently pick either side.
+- If the user corrects a single sketch, update only that screen's `viewport`. Don't propagate to other screens.
+- Record rationale on each detection-based `assumption` so the user can audit it later, e.g. `"Inferred 'mobile' for screen 'signup' from ~9:18 drawn frame ratio + bottom tab bar."`.
 
 ---
 
