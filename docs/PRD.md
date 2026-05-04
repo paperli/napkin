@@ -202,7 +202,8 @@ Napkin should accept all of:
 - whiteboard photos
 - optional written context
 - optional product type
-- optional target viewport
+- target viewport — auto-detected per sketch from the drawn frame's aspect ratio at intake (see SKILL §1a); user may confirm or override per sketch
+- target surface — Phase-2a always renders `responsive_web`; if the user names `mobile_app`, `desktop_app`, or `tv` it is recorded on the IR but rendering is deferred to Phase-4/5
 - optional design-system reference *(future / low priority — see §15)*
 
 Example user prompt:

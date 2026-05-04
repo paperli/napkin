@@ -36,6 +36,7 @@ The point is not to be exhaustive. The point is to surface the questions a thoug
 - Drawn frame ratio and content cues disagree (e.g. ~9:18 portrait frame containing a desktop-style sidebar and dense table).
 - Drawn frame ratio is ~1:1 (square) — too ambiguous to default.
 - User-named surface conflicts with what every sketch shows (e.g. "mobile_app" but all drawn frames are 16:9).
+- User stated a target viewport (e.g. "mobile web app") but at least one sketch's drawn frame ratio clearly disagrees (≥0.9 confidence, different ratio class).
 
 ### Multiple plausible interpretations exist
 
@@ -72,7 +73,7 @@ The point is not to be exhaustive. The point is to surface the questions a thoug
 
 - Single screen labeled "Login" with email + password + button → assume it's a login form, document the assumption.
 - Three repeated cards with no labels → assume `list` of `card`, mark confidence ~0.7.
-- Drawn frame ratio is unambiguous (≥0.9 confidence on every sketch) **and** the user named a matching surface → infer per-screen `viewport`, record as `assumptions`, proceed without a confirmation turn.
+- Drawn frame ratio is unambiguous (≥0.9 confidence on every sketch) **and** the user either said nothing about target surface or named `responsive_web` → infer per-screen `viewport`, record as `assumptions`, proceed without a confirmation turn.
 
 ### Things easier to show than ask
 

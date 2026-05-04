@@ -59,8 +59,8 @@ Both are first-class. If the user references a sketch but no image is attached a
 Also collect:
 
 - **Product context** — a one-line description of what the flow is for.
-- **Target surface** — `responsive_web`, `mobile_app`, `desktop_app`, or `tv`. If the user didn't say, infer it (1a) and confirm (1b). Phase-1 implementation focus is responsive web; later phases add the rest.
-- **Per-screen viewport** — `desktop`, `tablet`, `mobile`, or `tv`. Inferred per sketch (1a).
+- **Target surface** — `responsive_web`, `mobile_app`, `desktop_app`, or `tv`. **Phase-2a always renders `responsive_web`.** If the user explicitly names a non-web surface, record it on the IR but tell them rendering for that surface is deferred to Phase-4/5. Per-screen device shape is carried by `viewport`, not by `targetSurface`.
+- **Per-screen viewport** — `desktop`, `tablet`, `mobile`, or `tv`. Inferred per sketch (1a). RWD is vague; respecting each drawn frame's shape is what makes the output match what was sketched.
 
 ### 1a. Detect viewport from drawn sketch frames
 
@@ -82,12 +82,17 @@ For each sketch:
 | ~21:9 (ultra-wide) | `desktop` | rails + focus → `tv` |
 | ~1:1 (square) | ambiguous — ask | — |
 
-Then derive `targetSurface`:
+**No detectable frame.** If a sketch shows UI marks but no clearly drawn rectangle (floating elements on infinite paper, unframed whiteboard scribbles), fall back to the image's outer aspect ratio with reduced confidence (≤0.6) and flag the sketch in the 1b confirmation. Do not silently default to desktop.
 
-- All sketches resolve to `mobile` → propose `mobile_app`.
-- All sketches resolve to `desktop` → propose `desktop_app` if dense desktop chrome (menus, sidebars, multi-pane), else `responsive_web` (especially with browser chrome).
-- Mixed `mobile` + `desktop` → propose `responsive_web` with per-screen `viewport` set per sketch.
-- Any sketch resolves to `tv` → propose `tv`.
+**`targetSurface` is fixed in Phase-2a.** Always set `targetSurface: "responsive_web"` regardless of detected viewport mix. Per-screen `viewport` carries the device shape — a frame drawn at ~9:18 becomes a `mobile` viewport on a `responsive_web` surface, which is the right answer because it's what the user drew. RWD is vague; honoring the drawn frame's ratio is how Napkin respects the user's intent. If the user explicitly names `mobile_app`, `desktop_app`, or `tv` in their prompt, record that on the IR but tell them rendering for that surface is deferred to Phase-4/5; the IR still holds the right viewport data, ready for the later phase.
+
+**Stated viewport in the prompt.** If the user gives a viewport hint in the prompt ("mobile web app", "desktop tool", "tablet-first"), bias detection but don't override clear evidence:
+
+- Detection agrees on every sketch (≥0.7 confidence) → accept the stated viewport, skip 1b, record per-screen viewports as `assumptions`.
+- Detection clearly disagrees on any sketch (≥0.9 confidence and different ratio class — e.g. user said "mobile" but a sketch is unambiguously 16:9) → surface the conflict in 1b. Could be user error, could be an intentional cross-platform sketch; don't silently force either side.
+- Detection is low-confidence or mixed → trust the stated viewport, mark each sketch as an assumption with rationale (e.g. `"User said 'mobile web app'; drawn frame inconclusive."`).
+
+A stated viewport says nothing about `targetSurface`. "Mobile web app" → `targetSurface: "responsive_web"`, `viewport: "mobile"` per screen.
 
 ### 1b. Confirm the guess
 
@@ -95,19 +100,24 @@ Surface the guess as a single confirmation turn before generating the IR:
 
 ```
 Detected sketch frames:
-- sketch_01.png — ~9:18  → mobile
-- sketch_02.png — ~16:9  → desktop
-- sketch_03.png — ~16:9  → desktop
+- sketch_01.png             — ~9:18  → mobile  (conf 0.95)
+- sketch_02.png             — ~16:9  → desktop (conf 0.92)
+- whiteboard.png frame 1    — ~9:18  → mobile  (conf 0.88)
+- whiteboard.png frame 2    — ~16:9  → desktop (conf 0.91)
+- napkin.png                — no frame detected, fell back to image ratio ~4:3 → tablet (conf 0.55, please confirm)
 
-Best guess: responsive_web (1 mobile screen + 2 desktop screens).
+Best guess: responsive_web with per-screen viewports as above.
 
-Confirm, or correct (e.g. "all mobile_app", or "sketch_02 is tablet").
+Confirm, or correct (e.g. "all desktop", or "whiteboard.png frame 1 is tablet").
 ```
+
+A single image with multiple drawn frames is itemized one line per frame (`<file> frame <n>`); a single-frame image is itemized one line per file.
 
 Resolution:
 
-- If the user already named the surface in their prompt **and** it matches the dominant detected ratio, skip this confirmation and record per-screen viewports as `assumptions`.
-- If the user named a surface that **conflicts** with what every sketch shows (e.g. "mobile_app" but all sketches are 16:9), surface the conflict and ask — don't silently pick either side.
+- **Skip confirmation** when *every* sketch detection is ≥0.9 confidence **and** the user either said nothing about target surface or said `responsive_web`. Record per-screen viewports as `assumptions` and proceed.
+- **Always confirm** when any sketch is below 0.9 confidence, when no frame was detectable on a sketch, or when the user named a surface that conflicts with what the sketches show (e.g. "mobile_app" but all drawn frames are 16:9). Don't silently pick either side.
+- **Non-web surfaces.** If the user explicitly names `mobile_app`, `desktop_app`, or `tv` and it's consistent with the detected viewports, accept it on the IR but tell them Phase-2a will not render it — the IR is still a useful artifact for Phase-4/5.
 - If the user corrects a single sketch, update only that screen's `viewport`. Don't propagate to other screens.
 - Record rationale on each detection-based `assumption` so the user can audit it later, e.g. `"Inferred 'mobile' for screen 'signup' from ~9:18 drawn frame ratio + bottom tab bar."`.
 
