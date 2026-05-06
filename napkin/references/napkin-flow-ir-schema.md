@@ -93,6 +93,15 @@ type NapkinElement = {
                                     // ux-interpretation-principles.md §
                                     // Canonical layout vs. literal marks.
 
+  // For type === "custom_shape" only. Tells the renderer which primitive
+  // to draw so the rendering respects what the user actually sketched.
+  // See wireframe-library.md § Custom shape.
+  sketchOutline?: "rect" | "rounded_rect" | "circle" | "ellipse"
+                | "polygon" | "cross" | "line" | "freeform";
+  // For sketchOutline === "polygon": vertex count. Default 6.
+  // Octagon = 8, pentagon = 5, hexagon = 6, triangle = 3.
+  sketchPoints?: number;
+
   // (forward-looking) voice control
   voiceIntent?: string;             // utterance that targets this element
 

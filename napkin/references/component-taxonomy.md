@@ -12,6 +12,8 @@ This taxonomy is about *what something is*, not *what it looks like*. Napkin ren
 
 For semantic reference (not styling), Napkin uses **Radix UI** and **React Aria** as benchmarks for web. They are unstyled — exactly the right fit. If a sketch element doesn't have a clean Radix/React-Aria analogue, that's a signal to pause and consider whether it's actually a custom variant of something more standard.
 
+The visual rendering of each type — radius, padding, stroke, internal layout — lives in `wireframe-library.md`. This file defines the **what**; the library defines the **how it draws**.
+
 ---
 
 ## Phase-1 scope: responsive web
@@ -101,6 +103,12 @@ Communicate state or response.
 - `loading_state` — placeholder while content loads
 - `error_state` — placeholder when content fails to load
 - `confirmation_state` — success acknowledgment
+
+### Fallback
+
+Escape hatch for marks that don't fit the taxonomy.
+
+- `custom_shape` — a deliberate sketch mark that doesn't fit the taxonomy (d-pad, joystick, focus rail, decorative illustration, custom data viz). Carries `sketchOutline` (`"rect" | "rounded_rect" | "circle" | "ellipse" | "polygon" | "cross" | "line" | "freeform"`) and optional `sketchPoints` (vertex count for polygon). The renderer draws the closest primitive faithfully with a solid 1 px ink stroke and a clean label below — this is the "respect the sketched shape" path. **Not an error placeholder** — visual treatment matches every other wireframe element. Surfaces in `03 Notes` only when the model's confidence on what the shape *is* falls below 0.6. See `wireframe-library.md § Custom shape`.
 
 ---
 

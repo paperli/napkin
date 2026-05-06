@@ -130,7 +130,8 @@ napkin/
     │   ├── clarification-questions.md
     │   ├── napkin-flow-ir-schema.md
     │   ├── figma-board-guidelines.md       (Phase 2a)
-    │   └── figma-rendering-recipes.md      (Phase 2a)
+    │   ├── figma-rendering-recipes.md      (Phase 2a)
+    │   └── wireframe-library.md            (Phase 2a tier-1 archetypes)
     └── tests/
         └── fixtures/
             └── README.md     fixture format + recommended set

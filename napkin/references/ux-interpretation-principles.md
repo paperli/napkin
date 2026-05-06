@@ -100,7 +100,25 @@ Every screen and element in the IR carries a `confidence: number` field (0.0–1
 
 - **≥ 0.8** — proceed silently.
 - **0.5–0.8** — proceed but record an entry in `assumptions`.
-- **< 0.5** — record an `openQuestion` instead of guessing.
+- **< 0.5** — either record an `openQuestion` (when the ambiguity *blocks* rendering — entry point unclear, arrow direction reversed) or emit a `custom_shape` element (when the mark exists but doesn't fit the taxonomy — a d-pad, joystick, focus rail, decorative illustration, custom data viz). `custom_shape` is rendered as a clean primitive that respects what the user drew (solid stroke, label below) — *not* as a dashed/uncertain placeholder. See `component-taxonomy.md § Fallback` and `wireframe-library.md § Custom shape`.
+
+When emitting `custom_shape`, pick the `sketchOutline` that best matches the user's mark, and supply `sketchPoints` for polygons:
+
+| User drew | `sketchOutline` | `sketchPoints` |
+|---|---|---|
+| Circle / orb / joystick ball | `circle` | — |
+| Oval / capsule | `ellipse` | — |
+| Triangle | `polygon` | 3 |
+| Pentagon | `polygon` | 5 |
+| Hexagon | `polygon` | 6 |
+| Octagon | `polygon` | 8 |
+| D-pad / plus / cross | `cross` | — |
+| Rounded rectangle (badge-like custom) | `rounded_rect` | — |
+| Sharp rectangle | `rect` | — |
+| Single line / divider / arrow shaft | `line` | — |
+| Hand-drawn cloud, lightning, anything we can't classify as a primitive | `freeform` | — |
+
+The label on a `custom_shape` is the user's name for the element ("D-pad", "Joystick", "Logo cloud") — not "(?)" or "(unknown)". The shape is intentional; treat it as such.
 
 Examples:
 
@@ -109,6 +127,7 @@ Examples:
 | Clear three-card grid with labels | 0.95 | Just render |
 | Box that could be a card or a button | 0.6 | Pick one, add assumption |
 | Unreadable label, unclear screen role | 0.3 | Open question |
+| Freeform doodle (cloud, lightning, custom illustration) | 0.3 on type | `custom_shape` honoring the drawn outline |
 
 Do not silently merge ambiguous sketches into a clean output. The Figma board should *show* uncertainty — it's part of the artifact's value.
 
@@ -152,10 +171,12 @@ When you see these patterns, group the marks into a single semantic chrome conta
 
 | Pattern | Group as |
 |---|---|
-| Three+ small icon-marks in a row at the bottom of a mobile/tablet screen | One `nav_bar` (bottom tab bar) with `icon_button` children |
+| 2–5 peer items in a horizontal row at the bottom of a mobile/tablet screen — *any* mark style: icons, dots, circles, labeled rectangles, text labels | One `nav_bar` (bottom tab bar) with `icon_button` children |
 | Logo + links + auth buttons across the top | One `header` containing `nav_bar` with `link` / `button` children |
 | Back/title/action marks across the top of a mobile screen | One `header` with `icon_button` and `heading` children |
 | Vertical icon column on the left of a desktop screen | One `sidebar` containing `sidebar_nav` with children |
+
+**Group even when each mark looks like a button.** This is the most common interpretation failure: the user draws three labeled rectangles at the bottom of a mobile screen ("Home", "Search", "Profile"), and the literal reading is "three buttons." The semantic reading is one tab bar. The clue is: **2–5 peer items on the bottom edge of a mobile/tablet screen, evenly spaced** — that's almost always a bottom tab bar regardless of mark style. Use `nav_bar` with `icon_button` children even if the user wrote text labels (the labels become the icon-button labels).
 
 Children's `sketchPosition` is normalized to the chrome container, not the screen (see `napkin-flow-ir-schema.md`).
 

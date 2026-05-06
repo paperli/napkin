@@ -195,7 +195,8 @@ Use the `Write` tool. Create `.napkin/` if it does not exist. Do not put the IR 
 ## Step 5 — Render to Figma (Phase 2a)
 
 Read `references/figma-board-guidelines.md` for board structure, naming, and visual rules.
-Read `references/figma-rendering-recipes.md` for Plugin-API JS patterns.
+Read `references/figma-rendering-recipes.md` for Plugin-API JS orchestration patterns.
+Read `references/wireframe-library.md` for tier-1 component archetypes (tokens, render functions, custom-shape fallback).
 
 ### 5a. Detect Figma MCP
 
@@ -230,11 +231,12 @@ Decide batching:
 
 For each batch, generate JS that:
 
-1. Loads required fonts via `figma.loadFontAsync`.
-2. Defines the helpers and constants from `figma-rendering-recipes.md`.
-3. Creates or finds the target page (via `ensurePage`).
-4. Creates frames, elements, and arrows per the recipes, applying the `[napkin:...]` naming conventions to every node.
-5. Returns `{ pageId, frameIds, lastRenderedAt }`.
+1. Loads required fonts via `figma.loadFontAsync` (Inter Regular + Bold).
+2. Defines the helpers and constants from `figma-rendering-recipes.md` (orchestration: `makeFrame`, `makeText`, `ensurePage`, screen frame, layout, arrows, overview).
+3. Defines tokens, `autoFrame`, tier-1 archetypes, and `createByArchetype` from `wireframe-library.md`.
+4. Creates or finds the target page (via `ensurePage`).
+5. Creates frames, elements, and arrows per the recipes, applying the `[napkin:...]` naming conventions to every node.
+6. Returns `{ pageId, frameIds, lastRenderedAt }`.
 
 ### 5e. Execute the writes
 

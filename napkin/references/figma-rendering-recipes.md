@@ -245,11 +245,9 @@ Chrome children (icon slots in a tab bar, links in a header) follow the normal `
 
 ## Recipe 4: Component archetypes
 
-Each archetype renders a small group of related component types. Position is set by the parent's layout — these helpers just create the node. Archetypes that have meaningfully different sizes on mobile take a `viewport` parameter.
+The tier-1 archetype helpers (`makeButton`, `makeInput`, `makeToggle`, `makeCard`, `makeListItem`, `makeModal`, `makeAlert`, `makeBadge`, `makeAvatar`, `makeImagePlaceholder`, `makeTextNode`, `makeHeader`, `makeNavBar`, `makeFooter`, `makeIconButton`, `makeCustomShape`) live in `wireframe-library.md`. Paste that block of code into your `use_figma` payload alongside the orchestration helpers and tokens.
 
-### Container archetype
-
-For: `page`, `section`, `container`, `header`, `footer`, `sidebar`, `split_panel`, `card`, `modal`, `dialog`.
+The only archetype defined in *this* file is `makeContainer` — the long-tail fallback for tier-2 taxonomy types (`page`, `section`, `container`, `split_panel`, `sidebar`, `tabs`, `stepper`, etc.) that the library hasn't migrated yet.
 
 ```js
 function makeContainer(el, w, h) {
@@ -259,153 +257,19 @@ function makeContainer(el, w, h) {
 }
 ```
 
-A `modal` or `dialog` should be drawn smaller than the parent screen and centered, with an optional 50%-opacity dark backdrop frame behind it.
-
-### Text archetype
-
-For: `heading`, `paragraph`, `link`, `badge`.
-
-```js
-function makeTextNode(el) {
-  const sizes   = { heading: 24, paragraph: 14, link: 14, badge: 12 };
-  const weights = { heading: "bold", badge: "bold" };
-  const t = makeText(el.label || "(text)", sizes[el.type] || 14, weights[el.type]);
-  t.name = `[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`;
-  return t;
-}
-```
-
-### Action archetype
-
-For: `button`, `icon_button`, `menu_item`, `destructive_action`, `secondary_action`.
-
-```js
-function makeButton(el, viewport) {
-  const isMobile = viewport === "mobile";
-  const w = isMobile ? 280 : 120;
-  const h = isMobile ? 48 : 36;
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, w, h);
-  f.fills = [FILL_BUTTON];
-  f.strokes = [STROKE_DARK];
-  f.cornerRadius = 4;
-  const fontSize = isMobile ? 16 : 14;
-  const label = makeText(el.label || el.type, fontSize);
-  label.x = 16;
-  label.y = (h - fontSize - 4) / 2;
-  f.appendChild(label);
-  return f;
-}
-```
-
-### Input archetype
-
-For: `text_field`, `textarea`, `search_field`, `select`, `combo_box`.
-
-```js
-function makeInput(el, viewport) {
-  const isMobile = viewport === "mobile";
-  const isMultiline = el.type === "textarea";
-  const w = isMobile ? 320 : 280;
-  const h = isMultiline ? (isMobile ? 120 : 96) : (isMobile ? 48 : 36);
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, w, h);
-  f.strokes = [STROKE_DARK];
-  f.cornerRadius = 4;
-  const fontSize = isMobile ? 16 : 14;
-  const placeholder = makeText(el.label || el.type, fontSize);
-  placeholder.fills = [TEXT_MUTED];
-  placeholder.x = 12;
-  placeholder.y = isMultiline ? 12 : (h - fontSize - 4) / 2;
-  f.appendChild(placeholder);
-  return f;
-}
-```
-
-### Toggle archetype
-
-For: `checkbox`, `radio_group`, `switch`.
-
-```js
-function makeToggle(el) {
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, 200, 24);
-  f.fills = [];
-  f.strokes = [];
-  const ind = figma.createRectangle();
-  ind.resize(16, 16);
-  ind.x = 0; ind.y = 4;
-  ind.strokes = [STROKE_DARK];
-  ind.cornerRadius = el.type === "switch" ? 8 : 2;
-  f.appendChild(ind);
-  const label = makeText(el.label || el.type, 14);
-  label.x = 24; label.y = 4;
-  f.appendChild(label);
-  return f;
-}
-```
-
-### Media archetype
-
-For: `avatar`, `image_placeholder`.
-
-```js
-function makeMedia(el) {
-  const isAvatar = el.type === "avatar";
-  const w = isAvatar ? 40 : 240, h = isAvatar ? 40 : 160;
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, w, h);
-  f.strokes = [STROKE_DARK];
-  f.cornerRadius = isAvatar ? w / 2 : 4;
-  return f;
-}
-```
-
-### Feedback archetype
-
-For: `alert`, `toast`, `empty_state`, `loading_state`, `error_state`, `confirmation_state`.
-
-```js
-function makeFeedback(el) {
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, 320, 64);
-  f.strokes = [STROKE_DARK];
-  f.cornerRadius = 4;
-  const label = makeText(el.label || `(${el.type})`, 14);
-  label.x = 16; label.y = 22;
-  f.appendChild(label);
-  return f;
-}
-```
-
-### Navigation archetype
-
-For: `nav_bar`, `sidebar_nav`, `tabs`, `breadcrumb`, `stepper`, `pagination`, `menu`.
-
-Phase-2a simplifies aggressively. A `nav_bar` is a horizontal frame with a brand label on the left.
-
-```js
-function makeNavBar(el, parentWidth, viewport) {
-  // Chrome canonicalization (Recipe 3.5) sizes & anchors nav_bars after creation;
-  // this helper just creates the node with sensible defaults. The top-anchored
-  // 56 px height matches both desktop headers and mobile top nav. Bottom tab
-  // bars are resized to 64 by chromeLayout.
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, parentWidth, 56);
-  f.strokes = [STROKE_LIGHT];
-  const brand = makeText(el.label || "Brand", 16, "bold");
-  brand.x = 16; brand.y = 18;
-  f.appendChild(brand);
-  return f;
-}
-```
-
-For the other navigation types in Phase 2a, use the container archetype and place text labels at sensible offsets — the goal is a recognizable hint of structure, not pixel-perfect navigation.
-
 ---
 
 ## Recipe 4.5: Layout elements within a frame
 
-Element archetypes (Recipe 4) only create nodes; they don't position them. `renderElement` dispatches to the right archetype, applies `sketchPosition` / `sketchSize` if present, and recurses into `children`.
+Archetype helpers only create nodes; they don't position them. `renderElement` dispatches to the right archetype, applies `sketchPosition` / `sketchSize` if present, and recurses into `children`.
 
 `sketchPosition.x`/`y` are 0..1 normalized centroids within the parent (the screen frame for top-level elements, or the parent container for nested ones — a button inside a card is normalized to the card). `sketchSize.w`/`h` are 0..1 fractions of the parent's dimensions and override the archetype default size when present.
 
+The dispatch — `createByArchetype` — lives in `wireframe-library.md § Dispatch`. Paste it into the `use_figma` payload alongside the library archetypes. A few archetypes (`makeListItem`, `makeModal`) return `{ node, sibling }` so `renderElement` can append the sibling (divider line, modal scrim) onto the same parent.
+
 ```js
-// Per-archetype tap-target floors. Mobile imposes ≥44 px; desktop is smaller.
+// Per-archetype tap-target floors. Clamp absurdly small sketchSize overrides
+// so the literal mark size never produces sub-tap-target nodes on mobile.
 function archetypeFloor(elType, viewport) {
   const isMobile = viewport === "mobile";
   switch (elType) {
@@ -421,37 +285,11 @@ function archetypeFloor(elType, viewport) {
   }
 }
 
-function createByArchetype(el, parentNode, viewport) {
-  switch (el.type) {
-    case "page": case "section": case "container":
-    case "header": case "footer": case "sidebar":
-    case "split_panel": case "card": case "modal": case "dialog":
-      return makeContainer(el, parentNode.width, Math.min(parentNode.height, 200));
-    case "heading": case "paragraph": case "link": case "badge":
-      return makeTextNode(el);
-    case "button": case "icon_button": case "menu_item":
-    case "destructive_action": case "secondary_action":
-      return makeButton(el, viewport);
-    case "text_field": case "textarea": case "search_field":
-    case "select": case "combo_box":
-      return makeInput(el, viewport);
-    case "checkbox": case "radio_group": case "switch":
-      return makeToggle(el);
-    case "avatar": case "image_placeholder":
-      return makeMedia(el);
-    case "alert": case "toast": case "empty_state":
-    case "loading_state": case "error_state": case "confirmation_state":
-      return makeFeedback(el);
-    case "nav_bar":
-      return makeNavBar(el, parentNode.width, viewport);
-    default:
-      // Unknown type — generic container with a label so it still shows up.
-      return makeContainer(el, 200, 80);
-  }
-}
-
 function renderElement(el, parentNode, viewport, fallbackIndex = 0) {
-  const node = createByArchetype(el, parentNode, viewport);
+  const created = createByArchetype(el, parentNode, viewport);
+  const node    = created && created.node    ? created.node    : created;
+  const sibling = created && created.sibling ? created.sibling : null;
+  if (sibling) parentNode.appendChild(sibling);
 
   // Chrome path: canonical size + edge anchor. Ignore sketchSize and sketchPosition.
   if (isChromeType(el.type)) {
@@ -469,8 +307,10 @@ function renderElement(el, parentNode, viewport, fallbackIndex = 0) {
   }
 
   // Size: prefer sketchSize, with archetype-aware floors; else keep archetype default.
+  // custom_shape honors sketchSize literally (no floor) — that's the whole point of the fallback.
   if (el.sketchSize && typeof node.resize === "function") {
-    const [floorW, floorH] = archetypeFloor(el.type, viewport);
+    const [floorW, floorH] = el.type === "custom_shape" ? [8, 8]
+                                                        : archetypeFloor(el.type, viewport);
     node.resize(
       Math.max(floorW, el.sketchSize.w * parentNode.width),
       Math.max(floorH, el.sketchSize.h * parentNode.height)
@@ -620,13 +460,14 @@ Always warn the user before this runs — user edits inside Napkin-owned frames 
 
 ## Putting it together
 
-A complete `use_figma` payload for a small render:
+A complete `use_figma` payload for a small render. Paste in this order: orchestration constants from this file → wireframe library tokens, `autoFrame`, archetype helpers, and dispatch from `wireframe-library.md`.
 
 ```js
 await figma.loadFontAsync({ family: "Inter", style: "Regular" });
 await figma.loadFontAsync({ family: "Inter", style: "Bold" });
 
-// ...constants and helpers (paste from above)...
+// ...orchestration constants and helpers from this file...
+// ...wireframe-library.md tokens, autoFrame, archetype helpers, createByArchetype...
 
 // Pages
 const overview = ensurePage("00 Overview");
@@ -663,7 +504,7 @@ return {
 
 ## Char-count budget
 
-A typical 5-screen flow (helpers + 5 screens + 4 arrows + overview) lands around 5–8 KB. Comfortably under the 50 KB `use_figma` limit.
+A typical 5-screen flow (orchestration helpers + library tokens + tier-1 archetypes + dispatch + 5 screens + 4 arrows + overview) lands around 12–15 KB. Comfortably under the 50 KB `use_figma` limit. Larger flows split per page; the helpers and library code re-paste in each call (font state and globals don't carry between calls anyway).
 
 For larger flows (15+ screens), split into per-page calls. The helpers can be re-pasted in each call — the duplication is fine and avoids state coupling between calls.
 

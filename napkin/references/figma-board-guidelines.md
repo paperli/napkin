@@ -131,23 +131,19 @@ The same position-preserving rule applies one level down: each `NapkinElement` c
 
 ## Low-fi visual style
 
-Strict rules — no exceptions in Phase 2a:
+Per-component visual rules (radius, padding, stroke, fill, internal layout) live in `wireframe-library.md` — the headless wireframe library. This file covers only the board-level invariants that apply everywhere:
 
 | Element | Rule |
 |---|---|
 | Background | White (`#FFFFFF`) |
-| Frame stroke (chrome containers) | 1 px, light gray (`#E5E5E5`) |
-| Frame stroke (primary content) | 1 px, dark gray (`#333333`) |
-| Text color | Dark gray (`#333333`); secondary text `#777777` |
+| Text color | `#333333` ink, `#777777` muted |
 | Typeface | `Inter` (Figma default) — single typeface across the entire board |
-| Type scale | 24 px (heading), 16 px (h2), 14 px (body), 12 px (caption) |
-| Fills | Allowed only for buttons (light gray `#F5F5F5`) and disabled states (`#FAFAFA`); everything else is stroke-only |
-| Corner radius | 4 px on inputs and buttons; 0 elsewhere |
+| Type scale | 24 px (heading), 18 px (h2), 14 px (body), 12 px (caption) |
 | Shadows | None |
 | Brand colors / logos / imagery | None |
 | Icons | Optional, drawn as 16×16 vector glyphs in `#333333`. Skip if unclear in the sketch |
 
-These rules are deliberately rigid. Napkin's purpose is to keep stakeholder discussion on flow and structure, not visuals.
+These rules are deliberately rigid. Napkin's purpose is to keep stakeholder discussion on flow and structure, not visuals. Per-component decisions (button radius, card padding, modal scrim, chrome dividers) are defined once in the wireframe library so the look is consistent across every render.
 
 ---
 
