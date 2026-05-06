@@ -81,11 +81,17 @@ type NapkinElement = {
   sketchPosition?: {                // normalized centroid within the parent
     x: number;                      // 0..1, relative to parent (screen frame
     y: number;                      // or container) — not the source image
-  };
+  };                                // for chrome (header / nav_bar / footer /
+                                    // sidebar / sidebar_nav) record only the
+                                    // anchor cue — y≈0.95 hints "bottom tab
+                                    // bar" — not exact coordinates.
   sketchSize?: {                    // normalized size relative to parent
     w: number;                      // 0..1 fraction of parent width
     h: number;                      // 0..1 fraction of parent height
-  };
+  };                                // omit for chrome types — the renderer
+                                    // applies canonical dimensions. See
+                                    // ux-interpretation-principles.md §
+                                    // Canonical layout vs. literal marks.
 
   // (forward-looking) voice control
   voiceIntent?: string;             // utterance that targets this element

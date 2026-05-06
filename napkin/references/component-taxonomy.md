@@ -104,6 +104,22 @@ Communicate state or response.
 
 ---
 
+## Canonical layout for chrome
+
+Some types render with canonical layout regardless of how the sketch placed them. The interpreter records only that they exist and what they contain; the renderer snaps them to the canonical anchor and skips `sketchSize`. See `ux-interpretation-principles.md § Canonical layout vs. literal marks` and `figma-rendering-recipes.md § Recipe 3.5`.
+
+| Type | Canonical layout |
+|---|---|
+| `header` | Full-width, anchored top |
+| `nav_bar` (top) | Full-width, anchored top — usually inside `header` |
+| `nav_bar` (bottom, mobile/tablet) | Full-width, anchored bottom (mobile tab bar). Detected when the marks sit in the bottom ~15% of the frame |
+| `footer` | Full-width, anchored bottom |
+| `sidebar`, `sidebar_nav` | Full-height, anchored left |
+
+For non-chrome primitives, mobile imposes tap-target floors (≥ 44 × 44 for buttons; ≥ 44 tall for inputs). Desktop uses smaller archetype defaults.
+
+---
+
 ## Mark → component table
 
 A starting reference. Treat as soft guidance — context wins.

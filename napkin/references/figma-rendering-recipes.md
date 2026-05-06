@@ -193,9 +193,59 @@ Two screens drawn at near-identical positions in the sketch will overlap on the 
 
 ---
 
+## Recipe 3.5: Chrome canonicalization
+
+Strongly-semantic chrome elements (`header`, `nav_bar`, `footer`, `sidebar`, `sidebar_nav`) ignore `sketchSize` and snap to a canonical anchor on the parent. The interpreter records only that they exist and what they contain — the renderer applies canonical dimensions. See `ux-interpretation-principles.md § Canonical layout vs. literal marks`.
+
+```js
+function isChromeType(t) {
+  return t === "header" || t === "footer" || t === "nav_bar"
+      || t === "sidebar" || t === "sidebar_nav";
+}
+
+// "top" | "bottom" | "left" — canonical edge for a chrome element.
+function chromeAnchor(el, viewport) {
+  switch (el.type) {
+    case "header": return "top";
+    case "footer": return "bottom";
+    case "sidebar": case "sidebar_nav": return "left";
+    case "nav_bar": {
+      // Bottom tab bar if drawn in the bottom ~15% of a mobile/tablet screen.
+      const y = el.sketchPosition && el.sketchPosition.y;
+      const mobileish = viewport === "mobile" || viewport === "tablet";
+      return (mobileish && typeof y === "number" && y > 0.85) ? "bottom" : "top";
+    }
+  }
+  return null;
+}
+
+// Returns { w, h, x, y } in parent coordinates, or null if not chrome.
+function chromeLayout(el, parentNode, viewport) {
+  const W = parentNode.width, H = parentNode.height;
+  const footerH = viewport === "mobile" ? 56 : 64;
+  switch (el.type) {
+    case "header":
+      return { w: W, h: 56, x: 0, y: 0 };
+    case "footer":
+      return { w: W, h: footerH, x: 0, y: H - footerH };
+    case "sidebar": case "sidebar_nav":
+      return { w: 240, h: H, x: 0, y: 0 };
+    case "nav_bar":
+      return chromeAnchor(el, viewport) === "bottom"
+        ? { w: W, h: 64, x: 0, y: H - 64 }
+        : { w: W, h: 56, x: 0, y: 0 };
+  }
+  return null;
+}
+```
+
+Chrome children (icon slots in a tab bar, links in a header) follow the normal `renderElement` path *inside* the chrome parent — their `sketchPosition` is normalized to the chrome container, not the screen, so they benefit from the chrome's canonical dimensions automatically.
+
+---
+
 ## Recipe 4: Component archetypes
 
-Each archetype renders a small group of related component types. Position is set by the parent's layout — these helpers just create the node.
+Each archetype renders a small group of related component types. Position is set by the parent's layout — these helpers just create the node. Archetypes that have meaningfully different sizes on mobile take a `viewport` parameter.
 
 ### Container archetype
 
@@ -230,14 +280,18 @@ function makeTextNode(el) {
 For: `button`, `icon_button`, `menu_item`, `destructive_action`, `secondary_action`.
 
 ```js
-function makeButton(el) {
-  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, 120, 36);
+function makeButton(el, viewport) {
+  const isMobile = viewport === "mobile";
+  const w = isMobile ? 280 : 120;
+  const h = isMobile ? 48 : 36;
+  const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, w, h);
   f.fills = [FILL_BUTTON];
   f.strokes = [STROKE_DARK];
   f.cornerRadius = 4;
-  const label = makeText(el.label || el.type, 14);
+  const fontSize = isMobile ? 16 : 14;
+  const label = makeText(el.label || el.type, fontSize);
   label.x = 16;
-  label.y = 8;
+  label.y = (h - fontSize - 4) / 2;
   f.appendChild(label);
   return f;
 }
@@ -248,16 +302,19 @@ function makeButton(el) {
 For: `text_field`, `textarea`, `search_field`, `select`, `combo_box`.
 
 ```js
-function makeInput(el) {
+function makeInput(el, viewport) {
+  const isMobile = viewport === "mobile";
   const isMultiline = el.type === "textarea";
-  const w = 280, h = isMultiline ? 96 : 36;
+  const w = isMobile ? 320 : 280;
+  const h = isMultiline ? (isMobile ? 120 : 96) : (isMobile ? 48 : 36);
   const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, w, h);
   f.strokes = [STROKE_DARK];
   f.cornerRadius = 4;
-  const placeholder = makeText(el.label || el.type, 14);
+  const fontSize = isMobile ? 16 : 14;
+  const placeholder = makeText(el.label || el.type, fontSize);
   placeholder.fills = [TEXT_MUTED];
   placeholder.x = 12;
-  placeholder.y = 8;
+  placeholder.y = isMultiline ? 12 : (h - fontSize - 4) / 2;
   f.appendChild(placeholder);
   return f;
 }
@@ -323,7 +380,11 @@ For: `nav_bar`, `sidebar_nav`, `tabs`, `breadcrumb`, `stepper`, `pagination`, `m
 Phase-2a simplifies aggressively. A `nav_bar` is a horizontal frame with a brand label on the left.
 
 ```js
-function makeNavBar(el, parentWidth) {
+function makeNavBar(el, parentWidth, viewport) {
+  // Chrome canonicalization (Recipe 3.5) sizes & anchors nav_bars after creation;
+  // this helper just creates the node with sensible defaults. The top-anchored
+  // 56 px height matches both desktop headers and mobile top nav. Bottom tab
+  // bars are resized to 64 by chromeLayout.
   const f = makeFrame(`[napkin:el:${el.id}] ${el.type}: ${el.label || ""}`, parentWidth, 56);
   f.strokes = [STROKE_LIGHT];
   const brand = makeText(el.label || "Brand", 16, "bold");
@@ -344,7 +405,23 @@ Element archetypes (Recipe 4) only create nodes; they don't position them. `rend
 `sketchPosition.x`/`y` are 0..1 normalized centroids within the parent (the screen frame for top-level elements, or the parent container for nested ones — a button inside a card is normalized to the card). `sketchSize.w`/`h` are 0..1 fractions of the parent's dimensions and override the archetype default size when present.
 
 ```js
-function createByArchetype(el, parentNode) {
+// Per-archetype tap-target floors. Mobile imposes ≥44 px; desktop is smaller.
+function archetypeFloor(elType, viewport) {
+  const isMobile = viewport === "mobile";
+  switch (elType) {
+    case "button": case "destructive_action": case "secondary_action":
+      return isMobile ? [120, 44] : [80, 32];
+    case "icon_button": case "menu_item":
+      return isMobile ? [44, 44] : [32, 32];
+    case "text_field": case "search_field": case "select":
+    case "combo_box": case "textarea":
+      return isMobile ? [160, 44] : [120, 32];
+    default:
+      return [40, 20]; // soft floor for everything else
+  }
+}
+
+function createByArchetype(el, parentNode, viewport) {
   switch (el.type) {
     case "page": case "section": case "container":
     case "header": case "footer": case "sidebar":
@@ -354,10 +431,10 @@ function createByArchetype(el, parentNode) {
       return makeTextNode(el);
     case "button": case "icon_button": case "menu_item":
     case "destructive_action": case "secondary_action":
-      return makeButton(el);
+      return makeButton(el, viewport);
     case "text_field": case "textarea": case "search_field":
     case "select": case "combo_box":
-      return makeInput(el);
+      return makeInput(el, viewport);
     case "checkbox": case "radio_group": case "switch":
       return makeToggle(el);
     case "avatar": case "image_placeholder":
@@ -366,21 +443,37 @@ function createByArchetype(el, parentNode) {
     case "loading_state": case "error_state": case "confirmation_state":
       return makeFeedback(el);
     case "nav_bar":
-      return makeNavBar(el, parentNode.width);
+      return makeNavBar(el, parentNode.width, viewport);
     default:
       // Unknown type — generic container with a label so it still shows up.
       return makeContainer(el, 200, 80);
   }
 }
 
-function renderElement(el, parentNode, fallbackIndex = 0) {
-  const node = createByArchetype(el, parentNode);
+function renderElement(el, parentNode, viewport, fallbackIndex = 0) {
+  const node = createByArchetype(el, parentNode, viewport);
 
-  // Size: prefer sketchSize, else keep archetype default.
+  // Chrome path: canonical size + edge anchor. Ignore sketchSize and sketchPosition.
+  if (isChromeType(el.type)) {
+    const layout = chromeLayout(el, parentNode, viewport);
+    if (layout && typeof node.resize === "function") {
+      node.resize(layout.w, layout.h);
+      node.x = layout.x;
+      node.y = layout.y;
+      parentNode.appendChild(node);
+      if (el.children && el.children.length) {
+        el.children.forEach((child, i) => renderElement(child, node, viewport, i));
+      }
+      return node;
+    }
+  }
+
+  // Size: prefer sketchSize, with archetype-aware floors; else keep archetype default.
   if (el.sketchSize && typeof node.resize === "function") {
+    const [floorW, floorH] = archetypeFloor(el.type, viewport);
     node.resize(
-      Math.max(40, el.sketchSize.w * parentNode.width),
-      Math.max(20, el.sketchSize.h * parentNode.height)
+      Math.max(floorW, el.sketchSize.w * parentNode.width),
+      Math.max(floorH, el.sketchSize.h * parentNode.height)
     );
   }
 
@@ -399,7 +492,7 @@ function renderElement(el, parentNode, fallbackIndex = 0) {
 
   // Recurse into children using this node as the new reference frame.
   if (el.children && el.children.length) {
-    el.children.forEach((child, i) => renderElement(child, node, i));
+    el.children.forEach((child, i) => renderElement(child, node, viewport, i));
   }
 
   return node;
@@ -546,7 +639,7 @@ renderOverview(overview, ir);
 const frameMap = {};
 const screenFrames = ir.screens.map(s => {
   const f = makeScreenFrame(s);
-  s.elements.forEach((el, i) => renderElement(el, f, i));
+  s.elements.forEach((el, i) => renderElement(el, f, s.viewport, i));
   frameMap[s.id] = f.id;
   return f;
 });
